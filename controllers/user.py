@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from config import USER_TABLE
-from utils import writeFile, appendFile, readFile
+from utils.files import writeFile, appendFile, readFile
+from utils.user_helper import checkDuplicateUser
 import os, json
 import sys
 
@@ -12,16 +13,13 @@ file_path = os.path.abspath(os.path.join(parent_dir, "db/{}".format(USER_TABLE))
 
 
 def registerUser(user_data):
-    try:
-        if not user_data:
-            return False
-
-        existing_data = readFile(file_path)
-        existing_data.append(user_data)
-        json_string = json.dumps(existing_data)
-        writeFile(file_path, json_string)
-        return True
-    except Exception as e:
-        print(e)
+    if not user_data:
         return False
+
+    existing_data = readFile(file_path)
+    checkDuplicateUser(existing_data, user_data)
+    existing_data.append(user_data)
+    json_string = json.dumps(existing_data)
+    writeFile(file_path, json_string)
+    return True
 

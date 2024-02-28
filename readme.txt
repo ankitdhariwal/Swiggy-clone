@@ -1,13 +1,37 @@
 Main face will be 3 applications
-1) Customer's Application
-2) Rider's Application
-3) Admin/ Restaurant Application
+1) Customer's Application (APP)
+2) Rider's Application (APP)
+3) Admin/ Restaurant Application (APP)
+
+
+Coupons System - only single API for apply coupon made, seperate two tables can be there:
+1) Coupons
+2) Deals
+
+For type and that is user name is string , phone number is alpha-numeric , 
+These checks are mainly handled on front end, I am expecting that data types will be correct
+from input.
+we can use object serialization, like Schema, fields that will handle the tpe check while
+updating the tables.
+
+ORM USED - MODELS and SQLAlchemy (flask ORM)
+- ALL TABLES HAVE BEEN MADE WITHIN MODELS
+- BUT FOR LOCAL FUNCTIONALITIES DATA IS STORED IN db/{db}.json files
+
+
+- Updating rider location
+1) In real time , Scheduled Job will run to latitude, longitude of a rider , will place that
+in redis then, restaurant co-ordinates value will fixed , it will come from either DB or front end.
+
+
+- Some Things for fast in developemnt , used some assumptions, that mention in each API comment wise.
+
 
 =================================
-DATABASE DESIGN 
+DATABASE DESIGN
 =================================
 
-Users Table:
+=====> Users Table <=====
 user_id (Primary Key)
 username
 email
@@ -16,69 +40,76 @@ phone_number
 address
 
 
-Restaurants Table:
+=====> Restaurants Table <=====
 restaurant_id (Primary Key)
 name
 address
 contact_number
-cuisine_type (json)
+cuisine_type (json)/ (string)
 rating
+is_active
 
-Rider Table:
-rider_id
+
+=====> Rider Table <=====
+rider_id (Primary Key)
 name 
 email
 password_hash
-phone_number
+phone
 address
 vehicle_type
 vechile_no
 rating
-Availability
-
-Ratings Table:
-RatingID (Primary Key)
-RiderID (Foreign Key)
-CustomerID (Foreign Key) (JSON)
-Rating
-Review Text
+is_active
 
 
-Menu Items Table:      
+=====> Ratings Table <=====
+id (Primary Key)
+rating_value
+user_id (Foreign Key) (users)
+restaurant_id (Foreign Key) (restaurant)
+review_text
+
+
+=====> Menu Items Table <=====     
 item_id (Primary Key)
-restaurant_id (Foreign Key)
+restaurant_id (Foreign Key) (restaurant)
 name
 description
 price
 
 
-Orders Table:
+=====> Orders Table <=====
 order_id (Primary Key)
 user_id (Foreign Key)
 restaurant_id (Foreign Key)
 order_time
 delivery_address
 total_amount
+rider_id (Foreign Key) (Rider Table)
 status (pending, preparing, on the way, delivered)
 
 
-Order Items Table:
+=====> Order Items Table <=====
 order_item_id (Primary Key)
 order_id (Foreign Key) (Orders Table)
 item_id (Foreign Key) (Menu Table)
 quantity
-item_price
+notes 
+status
 
 
-Payment Table:
+=====> Payment Table <=====
 payment_id (Primary Key)
-order_id (Foreign Key)
+order_id (Foreign Key) (order table)
+amount
+payment_status
 payment_time
 payment_method
 amount
 
 
-Reviews Table: (This table will later update the restaurant table)
+=====> Reviews Table: (This table will later update the restaurant table) <=====
 review_id (Primary Key)
 user_id (Foreign Key)
 restaurant_id (Foreign Key)
@@ -87,7 +118,7 @@ comment
 review_time
 
 
-Other tables
+=====> Other tables that can be made - on  <=====
 1) Coupons
 2) Deals
 
@@ -98,7 +129,7 @@ API DESIGN
 =================================
 
 
-1) User Authentication:
+1) User Authentication: 
 
 Endpoint: /v1/auth
 Methods: POST
@@ -116,7 +147,7 @@ Response:
 }
 
 
-2) User Registration:
+2) User Registration: (1)
 
 Endpoint: /v1/user/register
 Methods: POST
@@ -132,12 +163,25 @@ Response:
     "message": "User registered successfully"
 }
 
-3) Rider Registration:
+
+3) Rider Registration: (2)
 Endpoint: /v1/rider/register
-will same as of 2
+Request Body:
+{
+    "name": "John Doe",
+    "email": "john_1@example.com",
+    "phone_number": "1234567891",
+    "vehicle_type": "Motorcycle",
+    "vehicle_registration": "ABC123"
+}
+Response:
+{
+    "message": "User John Doe has been successfully registered"
+}
 
 
-4) Restaurant Registration:
+
+4) Restaurant Registration: (3)
 Endpoint: /v1/restaurant/register
 Methods: POST
 Request Body:
@@ -206,7 +250,7 @@ Response:
 ]
 
 
-7) Find a rider nearest to the restaurant to pick up the order 
+7) Find a rider nearest to the restaurant to pick up the order  
 
 Endpoint: /v1/suggest-rider
 Methods: POST
@@ -232,7 +276,7 @@ Response:
 {"message": "Rider location successfully updated"}
 
 
-9) Menu Retrieval: (5)
+9) Menu Retrieval: (5).
 Endpoint: /v1/restaurants/{restaurant_id}/menu
 Methods: GET
 Response:
@@ -252,47 +296,78 @@ Response:
 ]
 
 
-10) Accept Order: (6)
-Endpoint: /v1/orders
+10) Accept Order: (6).
+Endpoint: /v1/orders/create
 Methods: POST
 Request Body:
 {
-  "restaurant_id": 1,
-  "items": [
-      {
-          "item_id": 1,
-          "quantity": 1
-      },
-      {
-          "item_id": 2,
-          "quantity": 1
-      }
-  ],
-  "delivery_address": "123, New Delhi"
+    "user_id": "123456",
+    "restaurant_id": "789012",
+    "total_amount": 250.50,
+    "order_items": [
+        {"item_id": "item_1", "name": "Pizza", "quantity": 2, "price": 100.00},
+        {"item_id": "item_2", "name": "Coke", "quantity": 1, "price": 50.50},
+        {"item_id": "item_3", "name": "Garlic Bread", "quantity": 1, "price": 50.00}
+    ]
 }
 
 Response:
 {
-    "message": "Order placed successfully"
+    "message": "Order created successfully",
+    "order": {
+        "order_status": "Pending",
+        "restaurant_id": "789012",
+        "total_amount": 250.5,
+        "user_id": "123456"
+    }
 }
 
 
 11) Order Status: 
 Endpoint: /v1/orders/{order_id}/status
 Methods: GET
+Response:
 {
     "status": "Delivered"
 }
 
-There can two API's for: (GET)
-12)order history for the customer , on basics user_id 
-13) order completed by the rider , by rider_id
+
+12) Estimate Delivery Time
+EndPoint:  v1/order/estimate-delivery-time?restaurant_name=restaurant_1
+Methods: GET
+Response:
+{
+    "estimated_delivery_time": "2024-02-28 09:35:37",
+    "restaurant_name": "restaurant_1"
+}
 
 
-Other API's can be
-14) Review for rider, customer, restaurant
-15) Analytics
-16) Coupons API
+13) Apply coupon
+EndPoint: v1/apply-coupon
+Methods: POST
+Request Body:
+{
+    "order_total": 250,
+    "coupon_code": "MY_SWIGGY20"
+}
+Response:
+{
+    "discounted_order_total": 200.0
+}
+
+
+
+===================================
+BONUS REQUIREMENTS
+===================================
+
+Approach to estimate the delivery time:
+
+Calculate the Preparation Time: Retrieve the average preparation time for orders from each restaurant. This can be based on historical data or predefined estimates.
+Calculate the Distance: Use a mapping service (e.g., Google Maps API) to calculate the distance between the restaurant and the delivery location.
+Estimate Travel Time: Use the estimated distance and current traffic conditions (if available) to estimate the travel time from the restaurant to the delivery location.
+Calculate Total Time: Add the preparation time and travel time to get the total estimated delivery time.
+Consider Other Factors: Factor in additional time for unexpected delays, peak hours, or busy periods.
 
 
 =================================
@@ -363,6 +438,7 @@ and searches for available delivery partners nearby.
 The delivery prediction and assignment service continuously update the pool of 
 available delivery persons for different areas to ensure efficient and timely delivery.
 
+
 =================================
 CUSTOMER FLOW
 =================================
@@ -379,3 +455,24 @@ idea of expected delivery times so they can make an informed decision about whic
 restaurant to order from.
 
 
+================================================================
+HANDLE Scalability in MY_SWIGGY APP
+================================================================
+
+1) Use a microservices architecture where different components of your application 
+can scale independently. This allows you to scale specific parts of your 
+system based on demand. Horizontal Scaling
+
+2) sharding techniques to distribute the database workload across multiple nodes.
+
+3) Use caching mechanisms like Redis or Memcached to cache frequently accessed 
+data and reduce the load on your database. 
+
+4) Offload long-running or resource-intensive tasks to background jobs or message 
+queues. Use asynchronous processing for tasks like order processing, notifications, 
+and data processing to free up resources and improve the responsiveness of your 
+application.
+
+5) Monitoring, Alerting -> health check and if any goes down .  Set up auto-scaling mechanisms  in response to changes in traffic or workload.
+
+6) Performance Optimization and Capacity Planning ie (growth projections and historical data) Plan ahead for scaling your infrastructure and resources to meet future demand.

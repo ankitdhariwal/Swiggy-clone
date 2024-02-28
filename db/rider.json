@@ -1,1 +1,1 @@
-[{"name": "John Doe", "email": "john@example.com", "phone_number": "1234567890", "vehicle_type": "Motorcycle", "vehicle_registration": "ABC123"}]
+[{"rider_id": 1 ,"name": "John Doe", "email": "john@example.com", "phone_number": "1234567890", "vehicle_type": "Motorcycle", "vehicle_registration": "ABC123"}, {"name": "John Doe", "email": "john_1@example.com", "phone_number": "1234567891", "vehicle_type": "Motorcycle", "vehicle_registration": "ABC123"}]
